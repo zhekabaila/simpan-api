@@ -112,12 +112,13 @@ class ProfilController extends Controller
             $fullPath = $storagePath . '/' . $filename;
             Storage::disk('public')->putFileAs($storagePath, $request->file('foto'), $filename);
 
-            // Create database record
+            // Create database record with full URL
+            $fullUrl = Storage::disk('public')->url($fullPath);
             $foto = FotoRumah::create([
                 'id' => (string) Str::uuid(),
                 'profil_masyarakat_id' => $profil->id,
                 'jenis_foto' => $request->jenis_foto,
-                'path_foto' => $fullPath,
+                'path_foto' => $fullUrl,
                 'keterangan' => $request->keterangan,
             ]);
 

@@ -3,33 +3,344 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\ProfilMasyarakat;
+use App\Models\FotoRumah;
+use App\Models\PengajuanBansos;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class MasyarakatSeeder extends Seeder
 {
+    private const FOTO_URL = 'https://images.unsplash.com/photo-1761839257658-23502c67f6d5?q=80&w=2670&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
+
+    private const FOTO_TYPES = [
+        'tampak_depan',
+        'ruang_tamu',
+        'kamar_tidur',
+        'kamar_mandi',
+        'dapur',
+        'atap_dinding',
+        'sumber_air',
+        'jamban'
+    ];
+
+    private const MASYARAKAT_DATA = [
+        [
+            'nama' => 'Siti Nurhaliza',
+            'email' => 'siti.nurhaliza@sibansos.id',
+            'nik' => '3206451987050001',
+            'nomor_telepon' => '081234567890',
+            'tanggal_lahir' => '1987-05-15',
+            'jenis_kelamin' => 'P',
+            'alamat' => 'Jl. Merdeka No. 45',
+            'rt' => '01',
+            'rw' => '02',
+            'kelurahan' => 'Cipete',
+            'kecamatan' => 'Cilandak',
+            'kota' => 'Jakarta Selatan',
+            'provinsi' => 'DKI Jakarta',
+            'latitude' => -6.2948,
+            'longitude' => 106.7999,
+            'status_pernikahan' => 'menikah',
+            'jumlah_tanggungan' => 2,
+            'status_pekerjaan' => 'tidak_bekerja',
+            'penghasilan_bulanan' => 0,
+            'status_kepemilikan_rumah' => 'numpang',
+            'dengan_pengajuan' => true,
+        ],
+        [
+            'nama' => 'Budi Santoso',
+            'email' => 'budi.santoso@sibansos.id',
+            'nik' => '3206451988060002',
+            'nomor_telepon' => '081345678901',
+            'tanggal_lahir' => '1988-06-20',
+            'jenis_kelamin' => 'L',
+            'alamat' => 'Jl. Garuda No. 12',
+            'rt' => '03',
+            'rw' => '04',
+            'kelurahan' => 'Gandaria',
+            'kecamatan' => 'Cilandak',
+            'kota' => 'Jakarta Selatan',
+            'provinsi' => 'DKI Jakarta',
+            'latitude' => -6.2856,
+            'longitude' => 106.7856,
+            'status_pernikahan' => 'cerai_hidup',
+            'jumlah_tanggungan' => 1,
+            'status_pekerjaan' => 'tidak_bekerja',
+            'penghasilan_bulanan' => 0,
+            'status_kepemilikan_rumah' => 'kontrak',
+            'dengan_pengajuan' => true,
+        ],
+        [
+            'nama' => 'Dewi Lestari',
+            'email' => 'dewi.lestari@sibansos.id',
+            'nik' => '3206451990070003',
+            'nomor_telepon' => '082456789012',
+            'tanggal_lahir' => '1990-07-11',
+            'jenis_kelamin' => 'P',
+            'alamat' => 'Jl. Anggrek No. 28',
+            'rt' => '05',
+            'rw' => '01',
+            'kelurahan' => 'Pesanggrahan',
+            'kecamatan' => 'Pesanggrahan',
+            'kota' => 'Jakarta Selatan',
+            'provinsi' => 'DKI Jakarta',
+            'latitude' => -6.2705,
+            'longitude' => 106.7512,
+            'status_pernikahan' => 'menikah',
+            'jumlah_tanggungan' => 3,
+            'status_pekerjaan' => 'wiraswasta',
+            'penghasilan_bulanan' => 1500000,
+            'status_kepemilikan_rumah' => 'milik_sendiri',
+            'dengan_pengajuan' => true,
+        ],
+        [
+            'nama' => 'Ahmad Wijaya',
+            'email' => 'ahmad.wijaya@sibansos.id',
+            'nik' => '3206451992080004',
+            'nomor_telepon' => '083567890123',
+            'tanggal_lahir' => '1992-08-25',
+            'jenis_kelamin' => 'L',
+            'alamat' => 'Jl. Flamboyan No. 67',
+            'rt' => '02',
+            'rw' => '03',
+            'kelurahan' => 'Cipete Utara',
+            'kecamatan' => 'Kebayoran Lama',
+            'kota' => 'Jakarta Selatan',
+            'provinsi' => 'DKI Jakarta',
+            'latitude' => -6.2598,
+            'longitude' => 106.7634,
+            'status_pernikahan' => 'belum_menikah',
+            'jumlah_tanggungan' => 1,
+            'status_pekerjaan' => 'bekerja',
+            'penghasilan_bulanan' => 2500000,
+            'status_kepemilikan_rumah' => 'kontrak',
+            'dengan_pengajuan' => true,
+        ],
+        [
+            'nama' => 'Ratna Wijayanti',
+            'email' => 'ratna.wijayanti@sibansos.id',
+            'nik' => '3206451985090005',
+            'nomor_telepon' => '084678901234',
+            'tanggal_lahir' => '1985-09-14',
+            'jenis_kelamin' => 'P',
+            'alamat' => 'Jl. Melati No. 89',
+            'rt' => '04',
+            'rw' => '05',
+            'kelurahan' => 'Lebak Bulus',
+            'kecamatan' => 'Cilandak',
+            'kota' => 'Jakarta Selatan',
+            'provinsi' => 'DKI Jakarta',
+            'latitude' => -6.3089,
+            'longitude' => 106.8045,
+            'status_pernikahan' => 'menikah',
+            'jumlah_tanggungan' => 2,
+            'status_pekerjaan' => 'tidak_bekerja',
+            'penghasilan_bulanan' => 0,
+            'status_kepemilikan_rumah' => 'numpang',
+            'dengan_pengajuan' => true,
+        ],
+        [
+            'nama' => 'Eka Prasetya',
+            'email' => 'eka.prasetya@sibansos.id',
+            'nik' => '3206451991100006',
+            'nomor_telepon' => '085789012345',
+            'tanggal_lahir' => '1991-10-30',
+            'jenis_kelamin' => 'L',
+            'alamat' => 'Jl. Bunga Raya No. 34',
+            'rt' => '01',
+            'rw' => '02',
+            'kelurahan' => 'Kemang',
+            'kecamatan' => 'Kemang',
+            'kota' => 'Jakarta Selatan',
+            'provinsi' => 'DKI Jakarta',
+            'latitude' => -6.2756,
+            'longitude' => 106.8152,
+            'status_pernikahan' => 'menikah',
+            'jumlah_tanggungan' => 1,
+            'status_pekerjaan' => 'wiraswasta',
+            'penghasilan_bulanan' => 1800000,
+            'status_kepemilikan_rumah' => 'kontrak',
+            'dengan_pengajuan' => false,
+        ],
+        [
+            'nama' => 'Susi Handayani',
+            'email' => 'susi.handayani@sibansos.id',
+            'nik' => '3206451989110007',
+            'nomor_telepon' => '086890123456',
+            'tanggal_lahir' => '1989-11-18',
+            'jenis_kelamin' => 'P',
+            'alamat' => 'Jl. Sudirman No. 156',
+            'rt' => '03',
+            'rw' => '04',
+            'kelurahan' => 'Pondok Indah',
+            'kecamatan' => 'Pondok Indah',
+            'kota' => 'Jakarta Selatan',
+            'provinsi' => 'DKI Jakarta',
+            'latitude' => -6.2890,
+            'longitude' => 106.7934,
+            'status_pernikahan' => 'cerai_mati',
+            'jumlah_tanggungan' => 3,
+            'status_pekerjaan' => 'tidak_bekerja',
+            'penghasilan_bulanan' => 0,
+            'status_kepemilikan_rumah' => 'milik_sendiri',
+            'dengan_pengajuan' => false,
+        ],
+        [
+            'nama' => 'Hendra Gunawan',
+            'email' => 'hendra.gunawan@sibansos.id',
+            'nik' => '3206451993120008',
+            'nomor_telepon' => '087901234567',
+            'tanggal_lahir' => '1993-12-05',
+            'jenis_kelamin' => 'L',
+            'alamat' => 'Jl. Bangka No. 78',
+            'rt' => '02',
+            'rw' => '01',
+            'kelurahan' => 'Kemang',
+            'kecamatan' => 'Kemang',
+            'kota' => 'Jakarta Selatan',
+            'provinsi' => 'DKI Jakarta',
+            'latitude' => -6.2823,
+            'longitude' => 106.8201,
+            'status_pernikahan' => 'belum_menikah',
+            'jumlah_tanggungan' => 0,
+            'status_pekerjaan' => 'bekerja',
+            'penghasilan_bulanan' => 3000000,
+            'status_kepemilikan_rumah' => 'kontrak',
+            'dengan_pengajuan' => false,
+        ],
+        [
+            'nama' => 'Mushawwir Rahman',
+            'email' => 'mushawwir.rahman@sibansos.id',
+            'nik' => '3206451986010009',
+            'nomor_telepon' => '088012345678',
+            'tanggal_lahir' => '1986-01-22',
+            'jenis_kelamin' => 'L',
+            'alamat' => 'Jl. Kebo Iwa No. 45',
+            'rt' => '04',
+            'rw' => '03',
+            'kelurahan' => 'Cilandak Barat',
+            'kecamatan' => 'Cilandak',
+            'kota' => 'Jakarta Selatan',
+            'provinsi' => 'DKI Jakarta',
+            'latitude' => -6.3012,
+            'longitude' => 106.7876,
+            'status_pernikahan' => 'menikah',
+            'jumlah_tanggungan' => 2,
+            'status_pekerjaan' => 'pensiun',
+            'penghasilan_bulanan' => 2000000,
+            'status_kepemilikan_rumah' => 'milik_sendiri',
+            'dengan_pengajuan' => false,
+        ],
+        [
+            'nama' => 'Linda Kusuma',
+            'email' => 'linda.kusuma@sibansos.id',
+            'nik' => '3206451994020010',
+            'nomor_telepon' => '089123456789',
+            'tanggal_lahir' => '1994-02-08',
+            'jenis_kelamin' => 'P',
+            'alamat' => 'Jl. Teuku Umar No. 92',
+            'rt' => '05',
+            'rw' => '02',
+            'kelurahan' => 'Cilandak Kota',
+            'kecamatan' => 'Cilandak',
+            'kota' => 'Jakarta Selatan',
+            'provinsi' => 'DKI Jakarta',
+            'latitude' => -6.3145,
+            'longitude' => 106.7945,
+            'status_pernikahan' => 'menikah',
+            'jumlah_tanggungan' => 1,
+            'status_pekerjaan' => 'wiraswasta',
+            'penghasilan_bulanan' => 1200000,
+            'status_kepemilikan_rumah' => 'numpang',
+            'dengan_pengajuan' => false,
+        ],
+    ];
+
     public function run(): void
     {
-        User::firstOrCreate(
-            ['email' => 'masyarakat1@sibansos.id'],
-            [
-                'id' => (string) Str::uuid(),
-                'nama' => 'masyarakat 1',
-                'password' => bcrypt('masyarakat123'),
-                'aktif' => true,
-                'role' => 'masyarakat',
-            ]
-        );
+        $adminUser = User::where('role', 'admin')->first();
 
-        User::firstOrCreate(
-            ['email' => 'masyarakat2@sibansos.id'],
-            [
-                'id' => (string) Str::uuid(),
-                'nama' => 'masyarakat 2',
-                'password' => bcrypt('masyarakat123'),
-                'aktif' => true,
-                'role' => 'masyarakat',
-            ]
-        );
+        foreach (self::MASYARAKAT_DATA as $data) {
+            $dengan_pengajuan = $data['dengan_pengajuan'];
+            unset($data['dengan_pengajuan']);
+
+            // Create User
+            $user = User::firstOrCreate(
+                ['email' => $data['email']],
+                [
+                    'id' => (string) Str::uuid(),
+                    'nama' => $data['nama'],
+                    'password' => bcrypt('masyarakat123'),
+                    'aktif' => true,
+                    'role' => 'masyarakat',
+                ]
+            );
+
+            // Create ProfilMasyarakat
+            $profil = ProfilMasyarakat::firstOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'id' => (string) Str::uuid(),
+                    'user_id' => $user->id,
+                    'nik' => $data['nik'],
+                    'nama' => $data['nama'],
+                    'nomor_telepon' => $data['nomor_telepon'],
+                    'tanggal_lahir' => $data['tanggal_lahir'],
+                    'jenis_kelamin' => $data['jenis_kelamin'],
+                    'alamat' => $data['alamat'],
+                    'rt' => $data['rt'],
+                    'rw' => $data['rw'],
+                    'kelurahan' => $data['kelurahan'],
+                    'kecamatan' => $data['kecamatan'],
+                    'kota' => $data['kota'],
+                    'provinsi' => $data['provinsi'],
+                    'latitude' => $data['latitude'],
+                    'longitude' => $data['longitude'],
+                    'status_pernikahan' => $data['status_pernikahan'],
+                    'jumlah_tanggungan' => $data['jumlah_tanggungan'],
+                    'status_pekerjaan' => $data['status_pekerjaan'],
+                    'penghasilan_bulanan' => $data['penghasilan_bulanan'],
+                    'status_kepemilikan_rumah' => $data['status_kepemilikan_rumah'],
+                ]
+            );
+
+            // Create Foto Rumah with all types
+            foreach (self::FOTO_TYPES as $fotoType) {
+                FotoRumah::firstOrCreate(
+                    [
+                        'profil_masyarakat_id' => $profil->id,
+                        'jenis_foto' => $fotoType,
+                    ],
+                    [
+                        'id' => (string) Str::uuid(),
+                        'profil_masyarakat_id' => $profil->id,
+                        'jenis_foto' => $fotoType,
+                        'path_foto' => self::FOTO_URL,
+                        'keterangan' => "Foto {$fotoType} rumah dari {$data['nama']}",
+                        'diunggah_pada' => Carbon::now(),
+                    ]
+                );
+            }
+
+            // Create Pengajuan Bansos with approved status if applicable
+            if ($dengan_pengajuan && $adminUser) {
+                PengajuanBansos::firstOrCreate(
+                    [
+                        'profil_masyarakat_id' => $profil->id,
+                    ],
+                    [
+                        'id' => (string) Str::uuid(),
+                        'profil_masyarakat_id' => $profil->id,
+                        'nomor_pengajuan' => PengajuanBansos::generateNomerPengajuan(),
+                        'status' => 'ditinjau',
+                        'ditinjau_oleh' => $adminUser->id,
+                        'ditinjau_pada' => Carbon::now(),
+                        'diajukan_pada' => Carbon::now()->subDays(5),
+                    ]
+                );
+            }
+        }
     }
 }

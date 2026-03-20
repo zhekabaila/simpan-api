@@ -13,7 +13,7 @@ class FotoRumahResource extends JsonResource
         return [
             'id' => $this->id,
             'jenis_foto' => $this->jenis_foto,
-            'url_foto' => $this->path_foto ? Storage::disk('public')->url($this->path_foto) : null,
+            'url_foto' => $this->path_foto,
             'keterangan' => $this->keterangan,
             'diunggah_pada' => $this->diunggah_pada,
         ];

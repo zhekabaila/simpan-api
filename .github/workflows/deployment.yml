@@ -1,0 +1,32 @@
+name: "Bansos Tracker API"
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: shivammathur/setup-php@15c43e89cdef867065b0213be354c2841860869e
+        with:
+          php-version: "8.2"
+      - uses: actions/checkout@v4
+      - name: Directory Permissions
+        run: chmod -R 777 storage bootstrap/cache
+      - name: Deploy to Hostinger via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ftp.e-agendakelas.com
+          username: u239921409.publicftp
+          password: N7h[V|uS~M>SwY&W
+          protocol: ftp
+          port: 21
+          local-dir: ./ # bisa disesuaikan ke folder build
+          server-dir: /bansos-tracker-api.e-agendakelas.com/ # ganti sesuai struktur server kamu
+          dangerous-clean-slate: false
+      - name: Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+      - name: Run Remote Command over SSH, Install Node Dependencies, Build Vite
+        run: sshpass -p "@Stemanika55" ssh -o StrictHostKeyChecking=no -p 65002 u239921409@72.61.211.208 'cd domains/e-agendakelas.com/bansos-tracker-api.e-agendakelas.com; php composer.phar update; php composer.phar install; php artisan key:generate'

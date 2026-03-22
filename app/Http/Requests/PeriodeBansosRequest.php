@@ -17,8 +17,6 @@ class PeriodeBansosRequest extends FormRequest
             'nama_periode' => 'required|string',
             'jenis_bantuan' => 'required|in:sembako,tunai,bpnt,pkh,lainnya',
             'deskripsi' => 'nullable|string',
-            'tanggal_mulai' => 'required|date',
-            'tanggal_selesai' => 'required|date|after:tanggal_mulai',
             'status' => 'nullable|in:akan_datang,aktif,selesai',
         ];
     }
@@ -28,11 +26,6 @@ class PeriodeBansosRequest extends FormRequest
         return [
             'nama_periode.required' => 'Nama periode harus diisi',
             'jenis_bantuan.required' => 'Jenis bantuan harus dipilih',
-            'tanggal_mulai.required' => 'Tanggal mulai harus diisi',
-            'tanggal_mulai.date' => 'Tanggal mulai tidak valid',
-            'tanggal_selesai.required' => 'Tanggal selesai harus diisi',
-            'tanggal_selesai.date' => 'Tanggal selesai tidak valid',
-            'tanggal_selesai.after' => 'Tanggal selesai harus setelah tanggal mulai',
         ];
     }
 }

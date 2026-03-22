@@ -21,15 +21,11 @@ class PeriodeBansos extends Model
         'nama_periode',
         'jenis_bantuan',
         'deskripsi',
-        'tanggal_mulai',
-        'tanggal_selesai',
         'status',
         'dibuat_oleh',
     ];
 
     protected $casts = [
-        'tanggal_mulai' => 'date',
-        'tanggal_selesai' => 'date',
     ];
 
     protected static function boot()

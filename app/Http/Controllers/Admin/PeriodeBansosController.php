@@ -56,8 +56,6 @@ class PeriodeBansosController extends Controller
                 'nama_periode' => $request->nama_periode,
                 'jenis_bantuan' => $request->jenis_bantuan,
                 'deskripsi' => $request->deskripsi,
-                'tanggal_mulai' => $request->tanggal_mulai,
-                'tanggal_selesai' => $request->tanggal_selesai,
                 'status' => 'akan_datang',
                 'dibuat_oleh' => $user->id,
             ]);

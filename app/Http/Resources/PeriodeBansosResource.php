@@ -31,8 +31,6 @@ class PeriodeBansosResource extends JsonResource
             'nama_periode' => $this->nama_periode,
             'jenis_bantuan' => $this->jenis_bantuan,
             'deskripsi' => $this->deskripsi,
-            'tanggal_mulai' => $this->tanggal_mulai,
-            'tanggal_selesai' => $this->tanggal_selesai,
             'status' => $this->status,
             'dibuat_oleh' => $this->dibuat_oleh,
             'pembuat' => new UserResource($this->pembuatPeriode),

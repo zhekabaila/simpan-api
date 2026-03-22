@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Helpers\PaginationHelper;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CreateUserWithProfilRequest;
 use App\Http\Resources\UserResource;
+use App\Models\ProfilMasyarakat;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class PenggunaAdminController extends Controller
@@ -123,6 +126,86 @@ class PenggunaAdminController extends Controller
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
             ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan pada server',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function createUserWithProfile(CreateUserWithProfilRequest $request)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Create user account
+            $user = User::create([
+                'nama' => $request->nama,
+                'email' => $request->email,
+                'password' => bcrypt($request->password),
+                'role' => $request->input('role', 'masyarakat'),
+                'aktif' => true,
+            ]);
+
+            // Create profil masyarakat
+            $profilData = [
+                'user_id' => $user->id,
+                'nik' => $request->nik,
+                'nama' => $request->nama,
+                'nomor_telepon' => $request->nomor_telepon,
+            ];
+
+            // Add optional fields if provided
+            $optionalFields = [
+                'tanggal_lahir',
+                'jenis_kelamin',
+                'alamat',
+                'rt',
+                'rw',
+                'kelurahan',
+                'kecamatan',
+                'kota',
+                'provinsi',
+                'latitude',
+                'longitude',
+                'status_pernikahan',
+                'jumlah_tanggungan',
+                'status_pekerjaan',
+                'penghasilan_bulanan',
+                'status_kepemilikan_rumah',
+            ];
+
+            foreach ($optionalFields as $field) {
+                if ($request->has($field) && $request->input($field) !== null) {
+                    $profilData[$field] = $request->input($field);
+                }
+            }
+
+            ProfilMasyarakat::create($profilData);
+
+            DB::commit();
+
+            Log::info('Pengguna dan profil masyarakat berhasil dibuat oleh admin', [
+                'admin_id' => auth()->id(),
+                'user_id' => $user->id,
+                'email' => $user->email,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pengguna dan profil masyarakat berhasil dibuat',
+                'data' => new UserResource($user->load('profilMasyarakat')),
+            ], Response::HTTP_CREATED);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::error('Gagal membuat pengguna dan profil masyarakat', [
+                'admin_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Terjadi kesalahan pada server',

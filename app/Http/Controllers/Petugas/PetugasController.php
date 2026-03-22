@@ -25,7 +25,6 @@ class PetugasController extends Controller
             $page = $request->input('page', 1);
 
             $paginator = PenugasanPetugas::where('petugas_id', $user->id)
-                ->where('status', '!=', 'selesai')
                 ->latest('ditugaskan_pada')
                 ->paginate($limit, ['*'], 'page', $page);
 

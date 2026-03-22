@@ -30,7 +30,6 @@ class PenugasanPetugasResource extends JsonResource
             'periode_bansos_id' => $this->periode_bansos_id,
             'petugas_id' => $this->petugas_id,
             'ditugaskan_oleh' => $this->ditugaskan_oleh,
-            'status' => $this->status,
             'catatan' => $this->catatan,
             'ditugaskan_pada' => $this->ditugaskan_pada,
             'updated_at' => $this->updated_at,

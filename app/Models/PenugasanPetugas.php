@@ -22,7 +22,6 @@ class PenugasanPetugas extends Model
         'periode_bansos_id',
         'petugas_id',
         'ditugaskan_oleh',
-        'status',
         'catatan',
         'ditugaskan_pada',
         'updated_at',

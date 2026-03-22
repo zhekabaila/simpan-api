@@ -119,7 +119,6 @@ class PenugasanAdminController extends Controller
                 'petugas_id' => $request->petugas_id,
                 'ditugaskan_oleh' => $user->id,
                 'catatan' => $request->catatan,
-                'status' => 'ditugaskan',
             ]);
 
             // Send notification
@@ -227,7 +226,6 @@ class PenugasanAdminController extends Controller
 
             $penugasan->update([
                 'catatan' => $request->catatan,
-                'status' => $request->input('status', $penugasan->status),
                 'updated_at' => now(),
             ]);
 

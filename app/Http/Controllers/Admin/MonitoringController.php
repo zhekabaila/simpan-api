@@ -171,6 +171,18 @@ class MonitoringController extends Controller
                 ->with('profilMasyarakat.user')
                 ->get();
 
+            // Calculate statistics
+            $totalPenerima = \Illuminate\Support\Facades\Cache::remember('total_masyarakat_count', 600, function () {
+                return \App\Models\User::where('role', 'masyarakat')->count();
+            });
+
+            $sudahTerima = DistribusiBansos::where('periode_bansos_id', $periodeId)
+                ->where('status', 'diterima')
+                ->count();
+
+            $belumTerima = max(0, $totalPenerima - $sudahTerima);
+            $progress = $totalPenerima > 0 ? round(($sudahTerima / $totalPenerima) * 100, 2) : 0;
+
             $data = $distribusi->map(function ($d) {
                 return [
                     'profil_masyarakat_id' => $d->profil_masyarakat_id,
@@ -194,6 +206,12 @@ class MonitoringController extends Controller
                 'success' => true,
                 'message' => 'Data peta berhasil diambil',
                 'data' => $data->values(),
+                'statistik' => [
+                    'total_penerima' => $totalPenerima,
+                    'sudah_terima' => $sudahTerima,
+                    'belum_terima' => $belumTerima,
+                    'progress_distribusi' => $progress . '%'
+                ]
             ]);
         } catch (\Exception $e) {
             Log::error('Gagal mengambil data peta', [

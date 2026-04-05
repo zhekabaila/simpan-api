@@ -167,17 +167,26 @@ class MonitoringController extends Controller
     public function peta($periodeId)
     {
         try {
+            // Get latest distribution per profil_masyarakat_id to avoid duplicates
             $distribusi = DistribusiBansos::where('periode_bansos_id', $periodeId)
                 ->with('profilMasyarakat.user')
-                ->get();
+                ->get()
+                ->groupBy('profil_masyarakat_id')
+                ->map(function ($group) {
+                    return $group->sortByDesc('diterima_pada')->first();
+                })
+                ->values();
 
-            // Calculate statistics
-            $totalPenerima = \Illuminate\Support\Facades\Cache::remember('total_masyarakat_count', 600, function () {
-                return \App\Models\User::where('role', 'masyarakat')->count();
-            });
+            // Calculate total approved masyarakat (pengajuan disetujui only)
+            $totalPenerima = PengajuanBansos::where('status', 'disetujui')
+                ->whereHas('profilMasyarakat')
+                ->distinct('profil_masyarakat_id')
+                ->count();
 
+            // Count already received (distinct profil_masyarakat_id)
             $sudahTerima = DistribusiBansos::where('periode_bansos_id', $periodeId)
                 ->where('status', 'diterima')
+                ->distinct('profil_masyarakat_id')
                 ->count();
 
             $belumTerima = max(0, $totalPenerima - $sudahTerima);

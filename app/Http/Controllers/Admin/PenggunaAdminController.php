@@ -6,6 +6,7 @@ use App\Helpers\PaginationHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CreateUserWithProfilRequest;
 use App\Http\Resources\UserResource;
+use App\Models\DistribusiBansos;
 use App\Models\ProfilMasyarakat;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -126,14 +127,25 @@ class PenggunaAdminController extends Controller
         $stats = [];
 
         if ($user->role === 'masyarakat' && $user->profilMasyarakat) {
+            // Only count distributions for approved applications
+            $approvedPengajuan = $user->profilMasyarakat->pengajuanBansos->where('status', 'disetujui')->first();
+            $distribusiDiterima = $approvedPengajuan ? 
+                DistribusiBansos::where('profil_masyarakat_id', $user->profilMasyarakat->id)
+                    ->where('status', 'diterima')
+                    ->count() : 0;
+            $distribusiGagal = $approvedPengajuan ?
+                DistribusiBansos::where('profil_masyarakat_id', $user->profilMasyarakat->id)
+                    ->where('status', 'gagal')
+                    ->count() : 0;
+
             $stats = [
                 'total_pengajuan' => $user->profilMasyarakat->pengajuanBansos->count(),
                 'pengajuan_disetujui' => $user->profilMasyarakat->pengajuanBansos->where('status', 'disetujui')->count(),
                 'pengajuan_ditolak' => $user->profilMasyarakat->pengajuanBansos->where('status', 'ditolak')->count(),
                 'pengajuan_menunggu' => $user->profilMasyarakat->pengajuanBansos->where('status', 'menunggu')->count(),
                 'total_foto_rumah' => $user->profilMasyarakat->fotoRumah->count(),
-                'total_distribusi_diterima' => $user->profilMasyarakat->distribusiBansos->where('status', 'diterima')->count(),
-                'total_distribusi_gagal' => $user->profilMasyarakat->distribusiBansos->where('status', 'gagal')->count(),
+                'total_distribusi_diterima' => $distribusiDiterima,
+                'total_distribusi_gagal' => $distribusiGagal,
                 'has_qrcode' => $user->profilMasyarakat->qrcodePenerima !== null,
             ];
         } elseif ($user->role === 'petugas') {

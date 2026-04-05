@@ -162,7 +162,7 @@ class MasyarakatSeeder extends Seeder
             'status_pekerjaan' => 'wiraswasta',
             'penghasilan_bulanan' => 1800000,
             'status_kepemilikan_rumah' => 'kontrak',
-            'dengan_pengajuan' => false,
+            'dengan_pengajuan' => true,
         ],
         [
             'nama' => 'Susi Handayani',
@@ -185,7 +185,7 @@ class MasyarakatSeeder extends Seeder
             'status_pekerjaan' => 'tidak_bekerja',
             'penghasilan_bulanan' => 0,
             'status_kepemilikan_rumah' => 'milik_sendiri',
-            'dengan_pengajuan' => false,
+            'dengan_pengajuan' => true,
         ],
         [
             'nama' => 'Hendra Gunawan',
@@ -208,7 +208,7 @@ class MasyarakatSeeder extends Seeder
             'status_pekerjaan' => 'bekerja',
             'penghasilan_bulanan' => 3000000,
             'status_kepemilikan_rumah' => 'kontrak',
-            'dengan_pengajuan' => false,
+            'dengan_pengajuan' => true,
         ],
         [
             'nama' => 'Mushawwir Rahman',
@@ -231,7 +231,7 @@ class MasyarakatSeeder extends Seeder
             'status_pekerjaan' => 'pensiun',
             'penghasilan_bulanan' => 2000000,
             'status_kepemilikan_rumah' => 'milik_sendiri',
-            'dengan_pengajuan' => false,
+            'dengan_pengajuan' => true,
         ],
         [
             'nama' => 'Linda Kusuma',
@@ -254,7 +254,7 @@ class MasyarakatSeeder extends Seeder
             'status_pekerjaan' => 'wiraswasta',
             'penghasilan_bulanan' => 1200000,
             'status_kepemilikan_rumah' => 'numpang',
-            'dengan_pengajuan' => false,
+            'dengan_pengajuan' => true,
         ],
         [
             'nama' => 'Shafa Rabbani Fityatul Mukarramah',

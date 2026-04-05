@@ -91,7 +91,10 @@ class MonitoringController extends Controller
             $page = $request->input('page', 1);
 
             $query = DistribusiBansos::where('periode_bansos_id', $periodeId)
-                ->with('profilMasyarakat.user', 'petugas');
+                ->with('profilMasyarakat.user', 'petugas')
+                ->whereHas('profilMasyarakat.pengajuanBansos', function ($q) {
+                    $q->where('status', 'disetujui');
+                });
 
             // Filter by status penerimaan
             if ($request->has('status') && $request->status) {
@@ -167,23 +170,15 @@ class MonitoringController extends Controller
     public function peta($periodeId)
     {
         try {
-            // Get latest distribution per profil_masyarakat_id to avoid duplicates
-            $distribusi = DistribusiBansos::where('periode_bansos_id', $periodeId)
+            // Get all approved pengajuan with profil data
+            $pengajuanDisetujui = PengajuanBansos::where('status', 'disetujui')
                 ->with('profilMasyarakat.user')
-                ->get()
-                ->groupBy('profil_masyarakat_id')
-                ->map(function ($group) {
-                    return $group->sortByDesc('diterima_pada')->first();
-                })
-                ->values();
+                ->get();
 
-            // Calculate total approved masyarakat (pengajuan disetujui only)
-            $totalPenerima = PengajuanBansos::where('status', 'disetujui')
-                ->whereHas('profilMasyarakat')
-                ->distinct('profil_masyarakat_id')
-                ->count();
+            // Calculate totals
+            $totalPenerima = $pengajuanDisetujui->count();
 
-            // Count already received (distinct profil_masyarakat_id)
+            // Count already received (distinct profil_masyarakat_id) on this periode
             $sudahTerima = DistribusiBansos::where('periode_bansos_id', $periodeId)
                 ->where('status', 'diterima')
                 ->distinct('profil_masyarakat_id')
@@ -192,18 +187,28 @@ class MonitoringController extends Controller
             $belumTerima = max(0, $totalPenerima - $sudahTerima);
             $progress = $totalPenerima > 0 ? round(($sudahTerima / $totalPenerima) * 100, 2) : 0;
 
-            $data = $distribusi->map(function ($d) {
+            // Build data array with all approved masyarakat
+            $data = $pengajuanDisetujui->map(function ($pengajuan) use ($periodeId) {
+                $profil = $pengajuan->profilMasyarakat;
+
+                // Check if this profil has received distribution in this periode
+                $distribusi = DistribusiBansos::where('periode_bansos_id', $periodeId)
+                    ->where('profil_masyarakat_id', $profil->id)
+                    ->where('status', 'diterima')
+                    ->latest('diterima_pada')
+                    ->first();
+
                 return [
-                    'profil_masyarakat_id' => $d->profil_masyarakat_id,
-                    'nama' => $d->profilMasyarakat->user->nama,
-                    'latitude' => (float) $d->profilMasyarakat->latitude,
-                    'longitude' => (float) $d->profilMasyarakat->longitude,
-                    'status_penerimaan' => $d->status === 'diterima' ? 'sudah_menerima' : 'belum_menerima',
-                    'diterima_pada' => $d->diterima_pada,
+                    'profil_masyarakat_id' => $profil->id,
+                    'nama' => $profil->user->nama,
+                    'latitude' => (float) $profil->latitude,
+                    'longitude' => (float) $profil->longitude,
+                    'status_penerimaan' => $distribusi ? 'sudah_menerima' : 'belum_menerima',
+                    'diterima_pada' => $distribusi ? $distribusi->diterima_pada : null,
                 ];
             })->filter(function ($item) {
                 return $item['latitude'] && $item['longitude'];
-            });
+            })->values();
 
             Log::info('Data peta berhasil diambil', [
                 'user_id' => auth()->id(),
@@ -214,7 +219,7 @@ class MonitoringController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Data peta berhasil diambil',
-                'data' => $data->values(),
+                'data' => $data,
                 'statistik' => [
                     'total_penerima' => $totalPenerima,
                     'sudah_terima' => $sudahTerima,
@@ -270,9 +275,12 @@ class MonitoringController extends Controller
                 ], Response::HTTP_BAD_REQUEST);
             }
 
-            // Get distribution data grouped by date
+            // Get distribution data grouped by date - only for approved applicants
             $distribusi = DistribusiBansos::whereBetween('diterima_pada', [$start, $end])
                 ->where('status', 'diterima')
+                ->whereHas('profilMasyarakat.pengajuanBansos', function ($q) {
+                    $q->where('status', 'disetujui');
+                })
                 ->select(DB::raw('DATE(diterima_pada) as tanggal'), DB::raw('COUNT(*) as jumlah'))
                 ->groupBy(DB::raw('DATE(diterima_pada)'))
                 ->orderBy('tanggal', 'asc')

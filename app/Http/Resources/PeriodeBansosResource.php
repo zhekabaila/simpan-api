@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\DistribusiBansos;
+use App\Models\PengajuanBansos;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -12,9 +13,11 @@ class PeriodeBansosResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        // 1. Ambil Total Penerima (Semua user dengan role masyarakat)
-        $totalPenerima = Cache::remember('total_masyarakat_count', 600, function () {
-            return User::where('role', 'masyarakat')->count();
+        // 1. Ambil Total Penerima (Hanya masyarakat dengan status pengajuan 'disetujui')
+        $totalPenerima = Cache::remember('total_approved_applicants_count', 600, function () {
+            return PengajuanBansos::where('status', 'disetujui')
+                ->distinct('profil_masyarakat_id')
+                ->count();
         });
 
         // 2. Ambil Jumlah yang Sudah Terima pada periode ini

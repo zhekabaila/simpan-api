@@ -6,6 +6,7 @@ use App\Helpers\PaginationHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PenugasanPetugasRequest;
 use App\Http\Resources\PenugasanPetugasResource;
+use App\Models\DistribusiBansos;
 use App\Models\PenugasanPetugas;
 use App\Models\User;
 use App\Services\NotifikasiService;
@@ -168,7 +169,7 @@ class PenugasanAdminController extends Controller
     public function detail($id)
     {
         try {
-            $penugasan = PenugasanPetugas::with('periodeBansos', 'petugas', 'ditugaskanOleh', 'distribusiBansos')->find($id);
+            $penugasan = PenugasanPetugas::with('periodeBansos', 'petugas', 'ditugaskanOleh')->find($id);
 
             if (!$penugasan) {
                 return response()->json([
@@ -177,11 +178,18 @@ class PenugasanAdminController extends Controller
                 ], Response::HTTP_NOT_FOUND);
             }
 
+            // Get distribution data only for approved applicants
+            $distribusiData = DistribusiBansos::where('penugasan_id', $id)
+                ->whereHas('profilMasyarakat.pengajuanBansos', function ($q) {
+                    $q->where('status', 'disetujui');
+                })
+                ->get();
+
             $statistik = [
-                'total_distribusi' => $penugasan->distribusiBansos->count(),
-                'sudah_diterima' => $penugasan->distribusiBansos->where('status', 'diterima')->count(),
-                'duplikat' => $penugasan->distribusiBansos->where('status', 'duplikat')->count(),
-                'gagal' => $penugasan->distribusiBansos->where('status', 'gagal')->count(),
+                'total_distribusi' => $distribusiData->count(),
+                'sudah_diterima' => $distribusiData->where('status', 'diterima')->count(),
+                'duplikat' => $distribusiData->where('status', 'duplikat')->count(),
+                'gagal' => $distribusiData->where('status', 'gagal')->count(),
             ];
 
             Log::info('Detail penugasan berhasil diambil', [

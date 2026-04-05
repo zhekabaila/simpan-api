@@ -12,6 +12,7 @@ use App\Models\PenugasanPetugas;
 use App\Models\QrcodePenerima;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -65,12 +66,18 @@ class PetugasController extends Controller
                 ], Response::HTTP_NOT_FOUND);
             }
 
-            // Gunakan fresh query builder dari relation untuk setiap count
+            // Get distribution data only for approved applicants
+            $distribusiData = DistribusiBansos::where('penugasan_id', $id)
+                ->whereHas('profilMasyarakat.pengajuanBansos', function ($q) {
+                    $q->where('status', 'disetujui');
+                })
+                ->get();
+
             $statistik = [
-                'total_distribusi' => $penugasan->distribusiBansos()->count(),
-                'sudah_diterima'   => $penugasan->distribusiBansos()->where('status', 'diterima')->count(),
-                'duplikat'         => $penugasan->distribusiBansos()->where('status', 'duplikat')->count(),
-                'gagal'            => $penugasan->distribusiBansos()->where('status', 'gagal')->count(),
+                'total_distribusi' => $distribusiData->count(),
+                'sudah_diterima'   => $distribusiData->where('status', 'diterima')->count(),
+                'duplikat'         => $distribusiData->where('status', 'duplikat')->count(),
+                'gagal'            => $distribusiData->where('status', 'gagal')->count(),
             ];
 
             Log::info('Detail penugasan berhasil diambil', [
@@ -260,8 +267,11 @@ class PetugasController extends Controller
             $limit = min($request->input('limit', 15), 100);
             $page = $request->input('page', 1);
 
-            // 1. Buat Base Query (Tanpa filter status)
-            $baseQuery = DistribusiBansos::where('petugas_id', $user->id);
+            // 1. Buat Base Query (Tanpa filter status) - only for approved applicants
+            $baseQuery = DistribusiBansos::where('petugas_id', $user->id)
+                ->whereHas('profilMasyarakat.pengajuanBansos', function ($q) {
+                    $q->where('status', 'disetujui');
+                });
 
             // Filter berdasarkan tanggal jika ada (berlaku untuk statistik juga)
             if ($request->has('tanggal') && $request->tanggal) {

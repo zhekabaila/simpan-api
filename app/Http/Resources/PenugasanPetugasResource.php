@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Models\User;
 use App\Models\DistribusiBansos;
+use App\Models\PengajuanBansos;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Cache;
@@ -12,10 +13,12 @@ class PenugasanPetugasResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        // 1. Ambil Total Penerima (Semua user dengan role masyarakat)
+        // 1. Ambil Total Penerima (Hanya masyarakat dengan status pengajuan 'disetujui')
         // Kita gunakan cache selama 10 menit agar tidak membebani database
-        $totalPenerima = Cache::remember('total_masyarakat_count', 600, function () {
-            return User::where('role', 'masyarakat')->count();
+        $totalPenerima = Cache::remember('total_approved_applicants_count', 600, function () {
+            return PengajuanBansos::where('status', 'disetujui')
+                ->distinct('profil_masyarakat_id')
+                ->count();
         });
         // 2. Ambil Jumlah yang Sudah Terima pada periode penugasan ini
         $sudahTerima = DistribusiBansos::where('periode_bansos_id', $this->periode_bansos_id)

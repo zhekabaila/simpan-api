@@ -59,13 +59,31 @@ class PenggunaAdminController extends Controller
     public function detail($id)
     {
         try {
-            $user = User::with('roles', 'profilMasyarakat')->find($id);
+            $relations = [
+                'profilMasyarakat' => function ($query) {
+                    $query->with(['fotoRumah', 'pengajuanBansos', 'qrcodePenerima', 'distribusiBansos']);
+                },
+                'notifikasi',
+            ];
+
+            // Add penugasan if user is petugas
+            $user = User::with($relations)->find($id);
 
             if (!$user) {
                 return response()->json([
                     'success' => false,
                     'message' => 'User tidak ditemukan',
                 ], Response::HTTP_NOT_FOUND);
+            }
+
+            // Load penugasan if role is petugas
+            if ($user->role === 'petugas') {
+                $user->load('penugasanPetugas.periodeBansos');
+            }
+
+            // Load periode jika user adalah admin
+            if ($user->role === 'admin') {
+                $user->load('periodeBansos');
             }
 
             Log::info('Detail pengguna berhasil diambil', [
@@ -76,7 +94,17 @@ class PenggunaAdminController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Detail pengguna berhasil diambil',
-                'data' => new UserResource($user),
+                'data' => [
+                    'user' => new UserResource($user),
+                    'summary' => [
+                        'role' => $user->role,
+                        'aktif' => $user->aktif,
+                        'has_profile' => $user->profilMasyarakat !== null,
+                        'total_notifications' => $user->notifikasi->count(),
+                        'unread_notifications' => $user->notifikasi->where('sudah_dibaca', false)->count(),
+                        'stats' => $this->getStatsByRole($user),
+                    ],
+                ],
             ]);
         } catch (\Exception $e) {
             Log::error('Gagal mengambil detail pengguna', [
@@ -91,6 +119,41 @@ class PenggunaAdminController extends Controller
                 'message' => 'Terjadi kesalahan pada server',
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    private function getStatsByRole($user)
+    {
+        $stats = [];
+
+        if ($user->role === 'masyarakat' && $user->profilMasyarakat) {
+            $stats = [
+                'total_pengajuan' => $user->profilMasyarakat->pengajuanBansos->count(),
+                'pengajuan_disetujui' => $user->profilMasyarakat->pengajuanBansos->where('status', 'disetujui')->count(),
+                'pengajuan_ditolak' => $user->profilMasyarakat->pengajuanBansos->where('status', 'ditolak')->count(),
+                'pengajuan_menunggu' => $user->profilMasyarakat->pengajuanBansos->where('status', 'menunggu')->count(),
+                'total_foto_rumah' => $user->profilMasyarakat->fotoRumah->count(),
+                'total_distribusi_diterima' => $user->profilMasyarakat->distribusiBansos->where('status', 'diterima')->count(),
+                'total_distribusi_gagal' => $user->profilMasyarakat->distribusiBansos->where('status', 'gagal')->count(),
+                'has_qrcode' => $user->profilMasyarakat->qrcodePenerima !== null,
+            ];
+        } elseif ($user->role === 'petugas') {
+            $penugasan = $user->penugasanPetugas ?? collect();
+            $stats = [
+                'total_penugasan' => $penugasan->count(),
+                'penugasan_ditugaskan' => $penugasan->where('status', 'ditugaskan')->count(),
+                'penugasan_selesai' => $penugasan->where('status', 'selesai')->count(),
+            ];
+        } elseif ($user->role === 'admin') {
+            $periode = $user->periodeBansos ?? collect();
+            $stats = [
+                'total_periode_dibuat' => $periode->count(),
+                'periode_akan_datang' => $periode->where('status', 'akan_datang')->count(),
+                'periode_aktif' => $periode->where('status', 'aktif')->count(),
+                'periode_selesai' => $periode->where('status', 'selesai')->count(),
+            ];
+        }
+
+        return $stats;
     }
 
     public function toggleAktif($id)

@@ -78,6 +78,30 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /**
+     * Get penugasan petugas for this user (if petugas)
+     */
+    public function penugasanPetugas()
+    {
+        return $this->hasMany(PenugasanPetugas::class, 'petugas_id', 'id');
+    }
+
+    /**
+     * Get periode bansos created by this user (if admin)
+     */
+    public function periodeBansos()
+    {
+        return $this->hasMany(PeriodeBansos::class, 'dibuat_oleh', 'id');
+    }
+
+    /**
+     * Get notifikasi for this user
+     */
+    public function notifikasi()
+    {
+        return $this->hasMany(Notifikasi::class, 'user_id', 'id');
+    }
+
+    /**
      * Get the identifier that will be stored in the subject claim of the JWT.
      *
      * @return mixed

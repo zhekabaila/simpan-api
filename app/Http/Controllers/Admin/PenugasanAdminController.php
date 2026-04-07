@@ -126,10 +126,11 @@ class PenugasanAdminController extends Controller
             try {
                 $periodeName = $penugasan->periodeBansos->nama_periode;
                 $wilayah = $request->deskripsi_wilayah ?? 'wilayah yang ditentukan';
+                $formattedPesanPenugasan = "*Penugasan Distribusi Baru*\n\nAnda mendapat penugasan distribusi bansos untuk periode `{$periodeName}` di wilayah __{$wilayah}__.\n\nSilakan cek detail penugasan di aplikasi.";
                 $this->notifikasiService->kirim(
                     $request->petugas_id,
                     'Penugasan Distribusi Baru',
-                    "Anda mendapat penugasan distribusi bansos periode {$periodeName} di wilayah {$wilayah}. Silakan cek detail penugasan.",
+                    $formattedPesanPenugasan,
                     'jadwal_distribusi',
                     $penugasan->id,
                     'penugasan_petugas'

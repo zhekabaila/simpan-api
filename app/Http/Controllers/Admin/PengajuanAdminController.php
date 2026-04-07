@@ -146,10 +146,11 @@ class PengajuanAdminController extends Controller
 
             // Send approval notification
             try {
+                $formattedPesanApprove = "Selamat! Pengajuan bansos Anda dengan nomor `{$pengajuan->nomor_pengajuan}` telah *DISETUJUI*\n\nQR Code Anda sudah siap. Buka aplikasi berikut untuk melihat QR Code:\nhttps://simpan.coreapps.web.id/masyarakat/dashboard";
                 $this->notifikasiService->kirim(
                     $pengajuan->profilMasyarakat->user_id,
                     'Pengajuan Bansos Disetujui',
-                    "Selamat! Pengajuan bansos Anda dengan nomor {$pengajuan->nomor_pengajuan} telah DISETUJUI. QR Code Anda sudah tersedia di aplikasi.",
+                    $formattedPesanApprove,
                     'status_pengajuan',
                     $pengajuan->id,
                     'pengajuan_bansos'
@@ -163,10 +164,11 @@ class PengajuanAdminController extends Controller
 
             // Send QR ready notification
             try {
+                $formattedPesanQR = "*QR Code Anda Sudah Siap*\n\nQR Code penerima bansos Anda sudah siap untuk digunakan saat distribusi. Buka link berikut untuk menampilkan QR Code:\nhttps://simpan.coreapps.web.id/masyarakat/dashboard";
                 $this->notifikasiService->kirim(
                     $pengajuan->profilMasyarakat->user_id,
                     'QR Code Anda Sudah Siap',
-                    'QR Code penerima bansos Anda sudah siap. Silakan buka aplikasi untuk menampilkan QR Code saat distribusi.',
+                    $formattedPesanQR,
                     'qr_siap',
                     $pengajuan->id,
                     'pengajuan_bansos'
@@ -245,10 +247,11 @@ class PengajuanAdminController extends Controller
 
             // Send review notification
             try {
+                $formattedPesanReview = "Pengajuan bansos Anda dengan nomor `{$pengajuan->nomor_pengajuan}` sedang dalam proses _tinjauan_.\n\nCek status aplikasi Anda di:\nhttps://simpan.coreapps.web.id/masyarakat/dashboard\n\nAmi akan segera memberikan keputusan.";
                 $this->notifikasiService->kirim(
                     $pengajuan->profilMasyarakat->user_id,
                     'Pengajuan Bansos Sedang Ditinjau',
-                    "Pengajuan bansos Anda dengan nomor {$pengajuan->nomor_pengajuan} sedang dalam proses tinjauan. Kami akan segera memberikan keputusan.",
+                    $formattedPesanReview,
                     'status_pengajuan',
                     $pengajuan->id,
                     'pengajuan_bansos'
@@ -317,10 +320,11 @@ class PengajuanAdminController extends Controller
 
             // Send rejection notification
             try {
+                $formattedPesanRejection = "Mohon maaf, pengajuan bansos Anda dengan nomor `{$pengajuan->nomor_pengajuan}` *DITOLAK*.\n\n*Alasan:*\n{$request->catatan_admin}\n\nUntuk informasi lebih lanjut, kunjungi:\nhttps://simpan.coreapps.web.id/masyarakat/dashboard";
                 $this->notifikasiService->kirim(
                     $pengajuan->profilMasyarakat->user_id,
                     'Pengajuan Bansos Ditolak',
-                    "Mohon maaf, pengajuan bansos Anda dengan nomor {$pengajuan->nomor_pengajuan} DITOLAK. Alasan: {$request->catatan_admin}",
+                    $formattedPesanRejection,
                     'status_pengajuan',
                     $pengajuan->id,
                     'pengajuan_bansos'

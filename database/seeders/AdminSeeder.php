@@ -11,7 +11,7 @@ class AdminSeeder extends Seeder
     public function run(): void
     {
         User::firstOrCreate(
-            ['email' => 'admin@sibansos.id'],
+            ['email' => 'admin@simpan.id'],
             [
                 'id' => (string) Str::uuid(),
                 'nama' => 'Super Admin',

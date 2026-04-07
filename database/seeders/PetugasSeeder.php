@@ -11,7 +11,7 @@ class PetugasSeeder extends Seeder
     public function run(): void
     {
         User::firstOrCreate(
-            ['email' => 'petugas1@sibansos.id'],
+            ['email' => 'petugas1@simpan.id'],
             [
                 'id' => (string) Str::uuid(),
                 'nama' => 'Petugas 1',
@@ -22,7 +22,7 @@ class PetugasSeeder extends Seeder
         );
 
         User::firstOrCreate(
-            ['email' => 'petugas2@sibansos.id'],
+            ['email' => 'petugas2@simpan.id'],
             [
                 'id' => (string) Str::uuid(),
                 'nama' => 'Petugas 2',

@@ -33,6 +33,19 @@ class UserResource extends JsonResource
             ];
         }
 
+        // Include profil_petugas if user is petugas
+        if ($this->role === 'petugas' && $this->profilPetugas) {
+            $data['profil'] = [
+                'id' => $this->profilPetugas->id,
+                'nomor_telepon' => $this->profilPetugas->nomor_telepon,
+                'alamat' => $this->profilPetugas->alamat,
+                'latitude' => $this->profilPetugas->latitude,
+                'longitude' => $this->profilPetugas->longitude,
+                'created_at' => $this->profilPetugas->created_at,
+                'updated_at' => $this->profilPetugas->updated_at,
+            ];
+        }
+
         return $data;
     }
 }

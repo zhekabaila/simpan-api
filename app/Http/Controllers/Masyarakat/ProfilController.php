@@ -10,6 +10,7 @@ use App\Http\Resources\FotoRumahResource;
 use App\Http\Resources\ProfilMasyarakatResource;
 use App\Models\FotoRumah;
 use App\Models\ProfilMasyarakat;
+use App\Services\EvolutionApiService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
@@ -60,6 +61,16 @@ class ProfilController extends Controller
     {
         try {
             $user = auth()->user();
+
+            // Verify WhatsApp number
+            $evolutionService = new EvolutionApiService();
+            if (!$evolutionService->checkWhatsAppNumber($request->nomor_telepon)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Nomor WhatsApp tidak valid atau tidak terdaftar di WhatsApp. Silakan gunakan nomor WhatsApp yang aktif.',
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
             $profil = ProfilMasyarakat::updateOrCreate(
                 ['user_id' => $user->id],
                 $request->validated()

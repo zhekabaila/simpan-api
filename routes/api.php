@@ -93,6 +93,8 @@ Route::middleware(['auth:api'])->group(function () {
         // Pengguna
         Route::get('pengguna', [PenggunaAdminController::class, 'list']);
         Route::post('pengguna/registrasi-by-admin', [PenggunaAdminController::class, 'createUserWithProfile']);
+        Route::post('pengguna/buat-petugas', [PenggunaAdminController::class, 'createPetugasUser']);
+        Route::patch('pengguna/{id}/reset-password', [PenggunaAdminController::class, 'resetUserPassword']);
         Route::get('pengguna/{id}', [PenggunaAdminController::class, 'detail']);
         Route::patch('pengguna/{id}/toggle-aktif', [PenggunaAdminController::class, 'toggleAktif']);
     });

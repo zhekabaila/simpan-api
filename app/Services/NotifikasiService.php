@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Jobs\KirimNotifikasiWhatsappJob;
 use App\Models\Notifikasi;
 use App\Models\ProfilMasyarakat;
+use App\Models\ProfilPetugas;
 use Illuminate\Support\Facades\Log;
 
 class NotifikasiService
@@ -20,7 +21,7 @@ class NotifikasiService
         $clean = preg_replace('/_([^_]+)_/u', '$1', $clean); // Remove _italic_
         $clean = preg_replace('/~([^~]+)~/u', '$1', $clean); // Remove ~strikethrough~
         $clean = preg_replace('/`([^`]+)`/u', '$1', $clean); // Remove `code`
-        
+
         return $clean;
     }
 
@@ -49,13 +50,25 @@ class NotifikasiService
 
             // Try to get phone number and dispatch job with formatted message for WhatsApp
             try {
-                $profil = ProfilMasyarakat::where('user_id', $userId)->first();
+                $nomorTelepon = null;
 
-                if ($profil && $profil->nomor_telepon) {
+                // Try to get phone number from ProfilMasyarakat
+                $profilMasyarakat = ProfilMasyarakat::where('user_id', $userId)->first();
+                if ($profilMasyarakat && $profilMasyarakat->nomor_telepon) {
+                    $nomorTelepon = $profilMasyarakat->nomor_telepon;
+                } else {
+                    // Try to get phone number from ProfilPetugas
+                    $profilPetugas = ProfilPetugas::where('user_id', $userId)->first();
+                    if ($profilPetugas && $profilPetugas->nomor_telepon) {
+                        $nomorTelepon = $profilPetugas->nomor_telepon;
+                    }
+                }
+
+                if ($nomorTelepon) {
                     // Send formatted message to WhatsApp
                     KirimNotifikasiWhatsappJob::dispatch(
                         $notifikasi->id,
-                        $profil->nomor_telepon,
+                        $nomorTelepon,
                         $pesan // Original message with formatting for WhatsApp
                     );
                 }

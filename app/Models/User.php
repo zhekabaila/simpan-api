@@ -78,6 +78,14 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /**
+     * Get the profil petugas associated with the user
+     */
+    public function profilPetugas()
+    {
+        return $this->hasOne(ProfilPetugas::class, 'user_id', 'id');
+    }
+
+    /**
      * Get penugasan petugas for this user (if petugas)
      */
     public function penugasanPetugas()

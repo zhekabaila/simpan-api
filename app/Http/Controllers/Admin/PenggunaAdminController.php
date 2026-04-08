@@ -5,10 +5,15 @@ namespace App\Http\Controllers\Admin;
 use App\Helpers\PaginationHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CreateUserWithProfilRequest;
+use App\Http\Requests\CreatePetugasUserRequest;
+use App\Http\Requests\ResetUserPasswordRequest;
 use App\Http\Resources\UserResource;
 use App\Models\DistribusiBansos;
 use App\Models\ProfilMasyarakat;
+use App\Models\ProfilPetugas;
 use App\Models\User;
+use App\Services\EvolutionApiService;
+use App\Services\NotifikasiService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
@@ -16,13 +21,18 @@ use Illuminate\Support\Facades\Log;
 
 class PenggunaAdminController extends Controller
 {
+    public function __construct(
+        private NotifikasiService $notifikasiService,
+    ) {}
+
     public function list(Request $request)
     {
         try {
             $limit = min($request->input('limit', 15), 100);
             $page = $request->input('page', 1);
 
-            $query = User::query();
+            $query = User::query()
+                ->with(['profilMasyarakat', 'profilPetugas']);
 
             if ($request->has('role') && $request->role) {
                 $query->where('role', $request->role);
@@ -64,6 +74,7 @@ class PenggunaAdminController extends Controller
                 'profilMasyarakat' => function ($query) {
                     $query->with(['fotoRumah', 'pengajuanBansos', 'qrcodePenerima', 'distribusiBansos']);
                 },
+                'profilPetugas',
                 'notifikasi',
             ];
 
@@ -79,7 +90,7 @@ class PenggunaAdminController extends Controller
 
             // Load penugasan if role is petugas
             if ($user->role === 'petugas') {
-                $user->load('penugasanPetugas.periodeBansos');
+                $user->load('profilPetugas', 'penugasanPetugas.periodeBansos');
             }
 
             // Load periode jika user adalah admin
@@ -129,14 +140,14 @@ class PenggunaAdminController extends Controller
         if ($user->role === 'masyarakat' && $user->profilMasyarakat) {
             // Only count distributions for approved applications
             $approvedPengajuan = $user->profilMasyarakat->pengajuanBansos->where('status', 'disetujui')->first();
-            $distribusiDiterima = $approvedPengajuan ? 
+            $distribusiDiterima = $approvedPengajuan ?
                 DistribusiBansos::where('profil_masyarakat_id', $user->profilMasyarakat->id)
-                    ->where('status', 'diterima')
-                    ->count() : 0;
+                ->where('status', 'diterima')
+                ->count() : 0;
             $distribusiGagal = $approvedPengajuan ?
                 DistribusiBansos::where('profil_masyarakat_id', $user->profilMasyarakat->id)
-                    ->where('status', 'gagal')
-                    ->count() : 0;
+                ->where('status', 'gagal')
+                ->count() : 0;
 
             $stats = [
                 'total_pengajuan' => $user->profilMasyarakat->pengajuanBansos->count(),
@@ -211,6 +222,15 @@ class PenggunaAdminController extends Controller
     public function createUserWithProfile(CreateUserWithProfilRequest $request)
     {
         try {
+            // Verify WhatsApp number first
+            $evolutionService = new EvolutionApiService();
+            if (!$evolutionService->checkWhatsAppNumber($request->nomor_telepon)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Nomor WhatsApp tidak valid atau tidak terdaftar di WhatsApp. Silakan gunakan nomor WhatsApp yang aktif.',
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
             DB::beginTransaction();
 
             // Create user account
@@ -266,6 +286,24 @@ class PenggunaAdminController extends Controller
                 'email' => $user->email,
             ]);
 
+            // Send notification to masyarakat
+            try {
+                $formattedPesanMasyarakat = "Selamat! Akun Anda telah berhasil dibuat oleh admin.\n\n*Informasi Login:*\n📧 Email: {$user->email}\n🔐 Password: {$request->password}\n📱 Nomor WhatsApp: {$request->nomor_telepon}\n\nAnda sekarang dapat login dan mengakses aplikasi SIMPAN.\n\n⚠️ _Kami sarankan Anda mengubah password dan nomor WhatsApp ini setelah login pertama kali di halaman profil._\n\nUntuk login, kunjungi: https://simpan.coreapps.web.id";
+                $this->notifikasiService->kirim(
+                    $user->id,
+                    'Akun Anda Telah Dibuat',
+                    $formattedPesanMasyarakat,
+                    'umum',
+                    $user->id,
+                    'pengguna'
+                );
+            } catch (\Exception $e) {
+                Log::error('Gagal mengirim notifikasi pembuatan akun masyarakat', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Pengguna dan profil masyarakat berhasil dibuat',
@@ -276,6 +314,149 @@ class PenggunaAdminController extends Controller
 
             Log::error('Gagal membuat pengguna dan profil masyarakat', [
                 'admin_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan pada server',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function createPetugasUser(CreatePetugasUserRequest $request)
+    {
+        try {
+            // Verify WhatsApp number first
+            $evolutionService = new EvolutionApiService();
+            if (!$evolutionService->checkWhatsAppNumber($request->nomor_telepon)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Nomor WhatsApp petugas tidak valid atau tidak terdaftar di WhatsApp. Silakan gunakan nomor WhatsApp yang aktif.',
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
+            DB::beginTransaction();
+
+            // Create user account
+            $user = User::create([
+                'nama' => $request->nama,
+                'email' => $request->email,
+                'password' => bcrypt($request->password),
+                'role' => 'petugas',
+                'aktif' => true,
+            ]);
+
+            // Create profil petugas
+            $profilData = [
+                'user_id' => $user->id,
+                'nomor_telepon' => $request->nomor_telepon,
+            ];
+
+            // Add optional fields if provided
+            $optionalFields = [
+                'alamat',
+                'latitude',
+                'longitude',
+            ];
+
+            foreach ($optionalFields as $field) {
+                if ($request->has($field) && $request->input($field) !== null) {
+                    $profilData[$field] = $request->input($field);
+                }
+            }
+
+            ProfilPetugas::create($profilData);
+
+            DB::commit();
+
+            Log::info('User petugas berhasil dibuat oleh admin', [
+                'admin_id' => auth()->id(),
+                'petugas_id' => $user->id,
+                'email' => $user->email,
+            ]);
+
+            // Send notification to petugas
+            try {
+                $formattedPesanPetugas = "Selamat! Akun petugas Anda telah berhasil dibuat oleh admin.\n\n*Informasi Login:*\n📧 Email: {$user->email}\n🔐 Password: {$request->password}\n📱 Nomor WhatsApp: {$request->nomor_telepon}\n\nAnda sekarang dapat login dan mengakses aplikasi SIMPAN untuk melihat penugasan distribusi.\n\n⚠️ _Kami sarankan Anda mengubah password dan nomor WhatsApp ini setelah login pertama kali di halaman profil._\n\nUntuk login, kunjungi: https://simpan.coreapps.web.id";
+                $this->notifikasiService->kirim(
+                    $user->id,
+                    'Akun Petugas Anda Telah Dibuat',
+                    $formattedPesanPetugas,
+                    'umum',
+                    $user->id,
+                    'pengguna'
+                );
+            } catch (\Exception $e) {
+                Log::error('Gagal mengirim notifikasi pembuatan akun petugas', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User petugas berhasil dibuat',
+                'data' => new UserResource($user->load('profilPetugas')),
+            ], Response::HTTP_CREATED);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::error('Gagal membuat user petugas', [
+                'admin_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan pada server',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function resetUserPassword($id, ResetUserPasswordRequest $request)
+    {
+        try {
+            $user = User::find($id);
+
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User tidak ditemukan',
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            // Only allow reset for masyarakat and petugas roles
+            if (!in_array($user->role, ['masyarakat', 'petugas'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Reset password hanya dapat dilakukan untuk user masyarakat dan petugas',
+                ], Response::HTTP_FORBIDDEN);
+            }
+
+            $user->update([
+                'password' => bcrypt($request->password),
+            ]);
+
+            Log::info('Password user berhasil direset oleh admin', [
+                'admin_id' => auth()->id(),
+                'user_id' => $id,
+                'user_role' => $user->role,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Password user berhasil direset',
+                'data' => new UserResource($user),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Gagal mereset password user', [
+                'admin_id' => auth()->id(),
+                'user_id' => $id ?? null,
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),

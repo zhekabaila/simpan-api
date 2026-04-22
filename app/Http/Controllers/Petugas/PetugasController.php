@@ -4,12 +4,16 @@ namespace App\Http\Controllers\Petugas;
 
 use App\Helpers\PaginationHelper;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ProfilPetugasRequest;
 use App\Http\Requests\ScanQrRequest;
 use App\Http\Resources\DistribusiResource;
 use App\Http\Resources\PenugasanPetugasResource;
+use App\Http\Resources\ProfilPetugasResource;
 use App\Models\DistribusiBansos;
 use App\Models\PenugasanPetugas;
+use App\Models\ProfilPetugas;
 use App\Models\QrcodePenerima;
+use App\Services\EvolutionApiService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
@@ -310,6 +314,86 @@ class PetugasController extends Controller
             );
         } catch (\Exception $e) {
             Log::error('Gagal mengambil riwayat distribusi', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan pada server',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function getProfile()
+    {
+        try {
+            $user = auth()->user();
+            $profil = ProfilPetugas::where('user_id', $user->id)->first();
+
+            if (!$profil) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Profil belum dibuat',
+                    'data' => null,
+                ]);
+            }
+
+            Log::info('Profil petugas berhasil diambil', [
+                'user_id' => $user->id,
+                'profil_id' => $profil->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Profil berhasil diambil',
+                'data' => new ProfilPetugasResource($profil),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Gagal mengambil profil petugas', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan pada server',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function updateProfile(ProfilPetugasRequest $request)
+    {
+        try {
+            $user = auth()->user();
+
+            $evolutionService = new EvolutionApiService();
+            if (!$evolutionService->checkWhatsAppNumber($request->nomor_telepon)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Nomor WhatsApp tidak valid atau tidak terdaftar di WhatsApp. Silakan gunakan nomor WhatsApp yang aktif.',
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
+            $profil = ProfilPetugas::updateOrCreate(
+                ['user_id' => $user->id],
+                $request->validated()
+            );
+
+            Log::info('Profil petugas berhasil disimpan', [
+                'user_id' => $user->id,
+                'profil_id' => $profil->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Profil berhasil disimpan',
+                'data' => new ProfilPetugasResource($profil),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Gagal menyimpan profil petugas', [
                 'user_id' => auth()->id(),
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),

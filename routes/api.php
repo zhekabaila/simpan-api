@@ -51,6 +51,8 @@ Route::middleware(['auth:api'])->group(function () {
 
     // Petugas routes
     Route::prefix('petugas')->middleware(['role:petugas'])->group(function () {
+        Route::get('profil', [PetugasController::class, 'getProfile']);
+        Route::post('profil', [PetugasController::class, 'updateProfile']);
         Route::get('penugasan', [PetugasController::class, 'getPenugasan']);
         Route::get('penugasan/{id}', [PetugasController::class, 'detailPenugasan']);
         Route::post('scan-qr', [PetugasController::class, 'scanQr']);

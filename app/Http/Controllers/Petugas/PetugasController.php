@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Petugas;
 
 use App\Helpers\PaginationHelper;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DokumentasiDistribusiRequest;
 use App\Http\Requests\ProfilPetugasRequest;
 use App\Http\Requests\ScanQrRequest;
 use App\Http\Resources\DistribusiResource;
+use App\Http\Resources\DokumentasiDistribusiResource;
 use App\Http\Resources\PenugasanPetugasResource;
 use App\Http\Resources\ProfilPetugasResource;
+use App\Models\DokumentasiDistribusi;
 use App\Models\DistribusiBansos;
 use App\Models\PenugasanPetugas;
 use App\Models\ProfilPetugas;
@@ -18,6 +21,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class PetugasController extends Controller
@@ -268,11 +272,15 @@ class PetugasController extends Controller
     {
         try {
             $user = auth()->user();
+            $periode_bansos_id = $request->input('periode_bansos_id', null);
             $limit = min($request->input('limit', 15), 100);
             $page = $request->input('page', 1);
 
             // 1. Buat Base Query (Tanpa filter status) - only for approved applicants
             $baseQuery = DistribusiBansos::where('petugas_id', $user->id)
+                ->when($periode_bansos_id, function ($e) use ($periode_bansos_id) {
+                    $e->where('periode_bansos_id', $periode_bansos_id);
+                })
                 ->whereHas('profilMasyarakat.pengajuanBansos', function ($q) {
                     $q->where('status', 'disetujui');
                 });
@@ -395,6 +403,252 @@ class PetugasController extends Controller
         } catch (\Exception $e) {
             Log::error('Gagal menyimpan profil petugas', [
                 'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan pada server',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function uploadDokumentasi(DokumentasiDistribusiRequest $request)
+    {
+        try {
+            $user = auth()->user();
+            $periodeId = $request->periode_bansos_id;
+
+            // Verify periode exists
+            $periode = \App\Models\PeriodeBansos::find($periodeId);
+            if (!$periode) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Periode bansos tidak ditemukan',
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            $jenisDocumentation = $request->jenis_dokumentasi;
+            $pathDocumentation = null;
+
+            // Handle file upload for foto type
+            if ($jenisDocumentation === 'foto' && $request->hasFile('foto')) {
+                $storagePath = "dokumentasi-distribusi/{$periodeId}";
+                if (!Storage::disk('public')->exists($storagePath)) {
+                    Storage::disk('public')->makeDirectory($storagePath);
+                }
+
+                $filename = 'dokumentasi_' . now()->timestamp . '.' . $request->file('foto')->getClientOriginalExtension();
+                $fullPath = $storagePath . '/' . $filename;
+                Storage::disk('public')->putFileAs($storagePath, $request->file('foto'), $filename);
+
+                $pathDocumentation = Storage::disk('public')->url($fullPath);
+            }
+
+            // Create dokumentasi record
+            $dokumentasi = DokumentasiDistribusi::create([
+                'id' => (string) Str::uuid(),
+                'periode_bansos_id' => $periodeId,
+                'petugas_id' => $user->id,
+                'jenis_dokumentasi' => $jenisDocumentation,
+                'path_dokumentasi' => $pathDocumentation,
+                'keterangan' => $request->keterangan,
+                'diunggah_pada' => now(),
+            ]);
+
+            Log::info('Dokumentasi distribusi berhasil diunggah', [
+                'user_id' => $user->id,
+                'periode_id' => $periodeId,
+                'dokumentasi_id' => $dokumentasi->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Dokumentasi berhasil diunggah',
+                'data' => new DokumentasiDistribusiResource($dokumentasi),
+            ], Response::HTTP_CREATED);
+        } catch (\Exception $e) {
+            Log::error('Gagal mengunggah dokumentasi distribusi', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan pada server',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function getDokumentasi($id)
+    {
+        try {
+            $user = auth()->user();
+            $dokumentasi = DokumentasiDistribusi::where('id', $id)
+                ->where('petugas_id', $user->id)
+                ->first();
+
+            if (!$dokumentasi) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Dokumentasi tidak ditemukan',
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            Log::info('Dokumentasi distribusi berhasil diambil', [
+                'user_id' => $user->id,
+                'dokumentasi_id' => $id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Dokumentasi berhasil diambil',
+                'data' => new DokumentasiDistribusiResource($dokumentasi),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Gagal mengambil dokumentasi', [
+                'user_id' => auth()->id(),
+                'dokumentasi_id' => $id ?? null,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan pada server',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function getDokumentasiByPeriode($periodeId, Request $request)
+    {
+        try {
+            $user = auth()->user();
+            $limit = min($request->input('limit', 15), 100);
+            $page = $request->input('page', 1);
+
+            // Verify periode exists
+            $periode = \App\Models\PeriodeBansos::find($periodeId);
+            if (!$periode) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Periode bansos tidak ditemukan',
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            $paginator = DokumentasiDistribusi::where('periode_bansos_id', $periodeId)
+                ->where('petugas_id', $user->id)
+                ->with('periodeBansos', 'petugas')
+                ->latest('diunggah_pada')
+                ->paginate($limit, ['*'], 'page', $page);
+
+            Log::info('Dokumentasi berdasarkan periode berhasil diambil', [
+                'user_id' => $user->id,
+                'periode_id' => $periodeId,
+                'count' => $paginator->count(),
+            ]);
+
+            return response()->json(
+                PaginationHelper::format($paginator, DokumentasiDistribusiResource::collection($paginator))
+            );
+        } catch (\Exception $e) {
+            Log::error('Gagal mengambil dokumentasi berdasarkan periode', [
+                'user_id' => auth()->id(),
+                'periode_id' => $periodeId ?? null,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan pada server',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function getDokumentasiByPeriodeAdmin($periodeId, Request $request)
+    {
+        try {
+            $user = auth()->user();
+            $limit = min($request->input('limit', 15), 100);
+            $page = $request->input('page', 1);
+
+            // Verify periode exists
+            $periode = \App\Models\PeriodeBansos::find($periodeId);
+            if (!$periode) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Periode bansos tidak ditemukan',
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            $paginator = DokumentasiDistribusi::where('periode_bansos_id', $periodeId)
+                ->with('periodeBansos', 'petugas')
+                ->latest('diunggah_pada')
+                ->paginate($limit, ['*'], 'page', $page);
+
+            Log::info('Dokumentasi berdasarkan periode berhasil diambil', [
+                'user_id' => $user->id,
+                'periode_id' => $periodeId,
+                'count' => $paginator->count(),
+            ]);
+
+            return response()->json(
+                PaginationHelper::format($paginator, DokumentasiDistribusiResource::collection($paginator))
+            );
+        } catch (\Exception $e) {
+            Log::error('Gagal mengambil dokumentasi berdasarkan periode', [
+                'user_id' => auth()->id(),
+                'periode_id' => $periodeId ?? null,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan pada server',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function deleteDokumentasi($id)
+    {
+        try {
+            $user = auth()->user();
+            $dokumentasi = DokumentasiDistribusi::where('id', $id)
+                ->where('petugas_id', $user->id)
+                ->first();
+
+            if (!$dokumentasi) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Dokumentasi tidak ditemukan',
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            // Delete file from storage if exists
+            if ($dokumentasi->path_dokumentasi && Storage::disk('public')->exists($dokumentasi->path_dokumentasi)) {
+                Storage::disk('public')->delete($dokumentasi->path_dokumentasi);
+            }
+
+            // Delete database record
+            $dokumentasi->delete();
+
+            Log::info('Dokumentasi distribusi berhasil dihapus', [
+                'user_id' => $user->id,
+                'dokumentasi_id' => $id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Dokumentasi berhasil dihapus',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Gagal menghapus dokumentasi', [
+                'user_id' => auth()->id(),
+                'dokumentasi_id' => $id ?? null,
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),

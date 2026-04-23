@@ -6,8 +6,10 @@ use App\Helpers\PaginationHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\FotoRumahRequest;
 use App\Http\Requests\ProfilMasyarakatRequest;
+use App\Http\Resources\DistribusiResource;
 use App\Http\Resources\FotoRumahResource;
 use App\Http\Resources\ProfilMasyarakatResource;
+use App\Models\DistribusiBansos;
 use App\Models\FotoRumah;
 use App\Models\ProfilMasyarakat;
 use App\Services\EvolutionApiService;
@@ -239,6 +241,58 @@ class ProfilController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Gagal mengambil foto rumah', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan pada server',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function getRiwayatDistribusi(Request $request)
+    {
+        try {
+            $user = auth()->user();
+            $profil = ProfilMasyarakat::where('user_id', $user->id)->first();
+
+            if (!$profil) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Profil tidak ditemukan',
+                    'data' => [],
+                    'pagination' => [
+                        'total' => 0,
+                        'per_page' => 0,
+                        'current_page' => 1,
+                        'last_page' => 1,
+                    ],
+                ]);
+            }
+
+            $limit = min($request->input('limit', 15), 100);
+            $page = $request->input('page', 1);
+
+            // Get all distribution history for this masyarakat (no status filter)
+            $paginator = DistribusiBansos::where('profil_masyarakat_id', $profil->id)
+                ->with('periodeBansos', 'petugas')
+                ->orderBy('diterima_pada', 'desc')
+                ->paginate($limit, ['*'], 'page', $page);
+
+            Log::info('Riwayat distribusi masyarakat berhasil diambil', [
+                'user_id' => $user->id,
+                'profil_id' => $profil->id,
+                'count' => $paginator->count(),
+            ]);
+
+            return response()->json(
+                PaginationHelper::format($paginator, DistribusiResource::collection($paginator)->resolve())
+            );
+        } catch (\Exception $e) {
+            Log::error('Gagal mengambil riwayat distribusi', [
                 'user_id' => auth()->id(),
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),

@@ -36,6 +36,9 @@ Route::middleware(['auth:api'])->group(function () {
         Route::delete('profil/foto-rumah/{id}', [ProfilController::class, 'deleteFoto']);
         Route::get('profil/foto-rumah', [ProfilController::class, 'getFotoRumah']);
 
+        // Distribusi Bansos
+        Route::get('distribusi', [ProfilController::class, 'getRiwayatDistribusi']);
+
         // Pengajuan
         Route::post('pengajuan', [PengajuanController::class, 'submit']);
         Route::get('pengajuan', [PengajuanController::class, 'getStatus']);
@@ -57,6 +60,13 @@ Route::middleware(['auth:api'])->group(function () {
         Route::get('penugasan/{id}', [PetugasController::class, 'detailPenugasan']);
         Route::post('scan-qr', [PetugasController::class, 'scanQr']);
         Route::get('riwayat-distribusi', [PetugasController::class, 'riwayatDistribusi']);
+        Route::get('list-masyarakat/{periode_id}', [MonitoringController::class, 'peta']);
+
+        // Dokumentasi Distribusi
+        Route::post('dokumentasi', [PetugasController::class, 'uploadDokumentasi']);
+        Route::get('dokumentasi/{id}', [PetugasController::class, 'getDokumentasi']);
+        Route::get('dokumentasi-periode/{periode_id}', [PetugasController::class, 'getDokumentasiByPeriode']);
+        Route::delete('dokumentasi/{id}', [PetugasController::class, 'deleteDokumentasi']);
     });
 
     // Admin routes
@@ -81,6 +91,7 @@ Route::middleware(['auth:api'])->group(function () {
         Route::get('penugasan/{id}', [PenugasanAdminController::class, 'detail']);
         Route::patch('penugasan/{id}', [PenugasanAdminController::class, 'update']);
         Route::delete('penugasan/{id}', [PenugasanAdminController::class, 'delete']);
+        Route::get('dokumentasi-periode/{periode_id}', [PetugasController::class, 'getDokumentasiByPeriodeAdmin']);
 
         // Monitoring
         Route::get('monitoring/statistik', [MonitoringController::class, 'statistik']);

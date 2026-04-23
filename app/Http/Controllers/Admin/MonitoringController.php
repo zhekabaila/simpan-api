@@ -201,6 +201,7 @@ class MonitoringController extends Controller
                 return [
                     'profil_masyarakat_id' => $profil->id,
                     'nama' => $profil->user->nama,
+                    'token_qr' => $profil->qrcodePenerima->token_qr,
                     'latitude' => (float) $profil->latitude,
                     'longitude' => (float) $profil->longitude,
                     'status_penerimaan' => $distribusi ? 'sudah_menerima' : 'belum_menerima',

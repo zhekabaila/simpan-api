@@ -52,4 +52,9 @@ class PeriodeBansos extends Model
     {
         return $this->hasMany(DistribusiBansos::class);
     }
+
+    public function dokumentasi(): HasMany
+    {
+        return $this->hasMany(DokumentasiDistribusi::class);
+    }
 }

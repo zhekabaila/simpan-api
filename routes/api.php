@@ -42,6 +42,7 @@ Route::middleware(['auth:api'])->group(function () {
         // Pengajuan
         Route::post('pengajuan', [PengajuanController::class, 'submit']);
         Route::get('pengajuan', [PengajuanController::class, 'getStatus']);
+        Route::get('pengajuan/getAll', [PengajuanController::class, 'getAll']);
 
         // QR Code
         Route::get('qrcode', [QrCodeController::class, 'getQrCode']);

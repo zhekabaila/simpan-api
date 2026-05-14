@@ -15,7 +15,7 @@ class ProfilMasyarakatResource extends JsonResource
             'nik' => $this->nik,
             'nama' => $this->nama,
             'nomor_telepon' => $this->nomor_telepon,
-            'tanggal_lahir' => $this->tanggal_lahir,
+            'tanggal_lahir' => $this->tanggal_lahir ? $this->tanggal_lahir->format('Y-m-d') : null,
             'jenis_kelamin' => $this->jenis_kelamin,
             'alamat' => $this->alamat,
             'rt' => $this->rt,

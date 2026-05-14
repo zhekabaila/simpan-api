@@ -162,24 +162,6 @@ class PengajuanAdminController extends Controller
                 ]);
             }
 
-            // Send QR ready notification
-            try {
-                $formattedPesanQR = "*QR Code Anda Sudah Siap*\n\nQR Code penerima bansos Anda sudah siap untuk digunakan saat distribusi. Buka link berikut untuk menampilkan QR Code:\nhttps://simpan.coreapps.web.id/masyarakat/dashboard";
-                $this->notifikasiService->kirim(
-                    $pengajuan->profilMasyarakat->user_id,
-                    'QR Code Anda Sudah Siap',
-                    $formattedPesanQR,
-                    'qr_siap',
-                    $pengajuan->id,
-                    'pengajuan_bansos'
-                );
-            } catch (\Exception $e) {
-                Log::error('Gagal mengirim notifikasi QR ready', [
-                    'pengajuan_id' => $pengajuan->id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-
             Log::info('Pengajuan berhasil disetujui', [
                 'user_id' => $user->id,
                 'pengajuan_id' => $id,

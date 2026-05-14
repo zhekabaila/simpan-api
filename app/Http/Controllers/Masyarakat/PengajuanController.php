@@ -131,4 +131,54 @@ class PengajuanController extends Controller
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+public function getAll()
+    {
+        try {
+            $user = auth()->user();
+            $profil = ProfilMasyarakat::where('user_id', $user->id)->first();
+
+            if (!$profil) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Pengajuan tidak ditemukan',
+                    'data' => [],
+                ]);
+            }
+
+            $pengajuans = PengajuanBansos::where('profil_masyarakat_id', $profil->id)
+                ->latest()
+                ->get();
+
+            if ($pengajuans->isEmpty()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Pengajuan tidak ditemukan',
+                    'data' => [],
+                ]);
+            }
+
+            Log::info('Semua pengajuan berhasil diambil', [
+                'user_id' => $user->id,
+                'total' => $pengajuans->count(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Semua pengajuan berhasil diambil',
+                'data' => PengajuanBansosResource::collection($pengajuans),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Gagal mengambil semua pengajuan', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan pada server',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
 }

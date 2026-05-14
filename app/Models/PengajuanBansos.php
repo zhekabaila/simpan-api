@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class PengajuanBansos extends Model
@@ -46,10 +47,17 @@ class PengajuanBansos extends Model
 
     public static function generateNomerPengajuan(): string
     {
-        $year = date('Y');
-        $count = self::whereRaw('YEAR(created_at) = ?', [$year])->count() + 1;
-        $sequence = str_pad($count, 5, '0', STR_PAD_LEFT);
-        return "PNG-{$year}-{$sequence}";
+        return DB::transaction(function () {
+            $year = date('Y');
+            // Dapatkan nomor urut terbesar yang pernah digunakan di tahun ini
+            $maxSequence = self::whereRaw('YEAR(created_at) = ?', [$year])
+                ->lockForUpdate()
+                ->selectRaw("MAX(CAST(SUBSTRING_INDEX(nomor_pengajuan, '-', -1) AS UNSIGNED)) as max_seq")
+                ->value('max_seq') ?? 0;
+
+            $sequence = str_pad($maxSequence + 1, 5, '0', STR_PAD_LEFT);
+            return "PNG-{$year}-{$sequence}";
+        });
     }
 
     public function profilMasyarakat(): BelongsTo

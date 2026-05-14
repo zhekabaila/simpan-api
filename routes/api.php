@@ -110,6 +110,7 @@ Route::middleware(['auth:api'])->group(function () {
         Route::patch('pengguna/{id}/reset-password', [PenggunaAdminController::class, 'resetUserPassword']);
         Route::get('pengguna/{id}', [PenggunaAdminController::class, 'detail']);
         Route::patch('pengguna/{id}/toggle-aktif', [PenggunaAdminController::class, 'toggleAktif']);
+        Route::delete('pengguna/{id}', [PenggunaAdminController::class, 'destroy']);
     });
 
     // File serving routes

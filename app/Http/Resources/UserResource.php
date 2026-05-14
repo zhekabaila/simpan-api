@@ -28,6 +28,7 @@ class UserResource extends JsonResource
                 'jumlah_anggota_keluarga' => $this->profilMasyarakat->jumlah_anggota_keluarga,
                 'penghasilan_bulanan' => $this->profilMasyarakat->penghasilan_bulanan,
                 'status_rumah' => $this->profilMasyarakat->status_rumah,
+                'status_pengajuan' => $this->profilMasyarakat->pengajuanBansos->where('status', 'disetujui')->first() ? 'disetujui' : 'belum disetujui',
                 'created_at' => $this->profilMasyarakat->created_at,
                 'updated_at' => $this->profilMasyarakat->updated_at,
             ];

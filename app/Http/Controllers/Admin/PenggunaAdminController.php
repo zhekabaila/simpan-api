@@ -32,7 +32,7 @@ class PenggunaAdminController extends Controller
             $page = $request->input('page', 1);
 
             $query = User::query()
-                ->with(['profilMasyarakat', 'profilPetugas']);
+                ->with(['profilMasyarakat.pengajuanBansos', 'profilPetugas']);
 
             if ($request->has('role') && $request->role) {
                 $query->where('role', $request->role);
@@ -457,6 +457,61 @@ class PenggunaAdminController extends Controller
             Log::error('Gagal mereset password user', [
                 'admin_id' => auth()->id(),
                 'user_id' => $id ?? null,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan pada server',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function destroy($id)
+    {
+        try {
+            $user = User::find($id);
+
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User tidak ditemukan',
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            // Prevent deleting self
+            if ($user->id === auth()->id()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Anda tidak dapat menghapus akun Anda sendiri',
+                ], Response::HTTP_FORBIDDEN);
+            }
+
+            DB::beginTransaction();
+
+            // Delete associated profiles will be handled by DB cascade or model events if configured,
+            // otherwise we perform the delete on the user object.
+            $user->delete();
+
+            DB::commit();
+
+            Log::info('User berhasil dihapus oleh admin', [
+                'admin_id' => auth()->id(),
+                'target_user_id' => $id,
+                'user_email' => $user->email,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User berhasil dihapus',
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Gagal menghapus user', [
+                'admin_id' => auth()->id(),
+                'target_user_id' => $id ?? null,
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),

